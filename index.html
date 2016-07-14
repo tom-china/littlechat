@@ -1,0 +1,116 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>web chat</title>
+		<style type="text/css">
+			.chat_frame{
+				width: 300px;
+				height: 300px;
+				overflow: auto;
+				border: 1px solid gray;
+				margin: 30px auto;
+			}
+			.input{
+				width: 300px;
+				height: 100px;
+				display: block;
+				margin: 10px auto;
+			}
+			.submit_btn{
+				display: block;
+				margin: 0 auto;
+			}
+			.chat_frame div{
+
+			}
+		</style>
+		<script type="text/javascript" src="jquery-1.7.2.js"></script>
+	</head>
+	<body>
+		<div class="chat_frame">
+		</div>
+		<form method="post" action="" >
+			<textarea name="content" class="input"></textarea>
+			<div style="width:200px;height:50px;margin:0 auto;">
+				在线用户
+				<select name="client" class="client">
+					
+				</select>
+			</div>
+			
+			<input type="button" value="提 交" class="submit_btn">
+		</form>
+	</body>
+	<script type="text/javascript">
+
+	//连接
+	ws = new WebSocket("ws://198.198.200.29:2345");
+	name = sessionStorage.name;
+
+	function connect(){
+		if(name == 'undefined' || name == 'null' || name == ''){
+			inputName();
+		}
+
+		var content = '{"type":"login","name":"'+ name +'","to_client":"all"}';
+		console.log(content);
+		ws.onopen = function() {
+		    ws.send(content);
+		};
+		
+	}
+
+	//输入名称
+	function inputName(){
+		name = prompt('输入你的名字：', 'wyn');
+
+		if(name != 'undefined' && name != 'null' && name != ''){
+			sessionStorage.name=name;
+		}else{
+			alert('请输入你的昵称！');
+			inputName();
+		}
+	}
+	//发送消息
+	$(".submit_btn").click(function(){
+			var text = $(".input").val();
+			var to_client = $(".client option:selected").val();
+
+			if(text == ''){
+				alert('不能发送空内容！');
+				return;
+			}
+
+			type = to_client == 'all'?"say":"prisay";	
+			var content = '{"type":"'+ type +'","content":"'+ text +'","name":"'+ name +'","to_client":"'+ to_client +'"}';
+			ws.send(content);
+			$(".input").val('').focus();
+		});
+
+	//服务端消息返回
+	ws.onmessage = function(e) {
+		var data = JSON.parse(e.data);
+		console.log(data);
+		var str = '<div>'+ data.content +'</div>';
+		
+		if(data.type == 'login'){
+			//已连接服务的客户端对象
+			var client_list = {};
+			client_list = data.clients;
+			console.log(client_list);
+			//遍历所有已连接客户端
+			html = '<option value="all" selected="selected">所有人</option>';
+			for (var key in client_list) {
+				html += '<option value="'+ key +'">'+ client_list[key].name +'</option>';
+			}
+			$('.client').html(html);
+		}
+		
+	    $(".chat_frame").append(str);
+	};	
+
+	$(document).ready(function(){
+		connect();
+	})
+	</script>
+</html>
